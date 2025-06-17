@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Обезьяний IQ тест</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .game-container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        #banana-game {
+            position: relative;
+            height: 300px;
+            border: 1px dashed #ccc;
+            overflow: hidden;
+        }
+        .banana {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M80,50 C80,20 50,10 30,30 C10,50 20,80 50,80 C80,80 80,80 80,50 Z" fill="yellow"/></svg>');
+            background-size: contain;
+            cursor: pointer;
+        }
+        #mirror-container {
+            display: flex;
+            justify-content: space-around;
+        }
+        #mirror-cursor {
+            width: 30px;
+            height: 30px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+        }
+        #mirror-target {
+            width: 30px;
+            height: 30px;
+            background-color: green;
+            border-radius: 50%;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <h1>Обезьяний IQ тест</h1>
+
+    <!-- Игра 1: Тест на память -->
+    <div class="game-container" id="memory-game">
+        <h2>Тест на память</h2>
+        <p>Запомни числа и повтори их порядок</p>
+        <div id="numbers-display" style="font-size: 24px; margin: 20px;"></div>
+        <input type="text" id="user-answer" placeholder="Введите числа через запятую">
+        <button onclick="checkMemory()">Проверить</button>
+        <p id="memory-result"></p>
+    </div>
+
+    <!-- Игра 2: Ловля бананов -->
+    <div class="game-container" id="banana-game-container">
+        <h2>Ловля бананов</h2>
+        <p>Поймай как можно больше бананов за 10 секунд!</p>
+        <div id="banana-game"></div>
+        <p>Осталось времени: <span id="time-left">10</span> сек</p>
+        <p>Поймано бананов: <span id="score">0</span></p>
+        <button onclick="startBananaGame()">Начать игру</button>
+    </div>
+
+    <!-- Игра 3: Зеркальный тест -->
+    <div class="game-container" id="mirror-game">
+        <h2>Зеркальный тест</h2>
+        <p>Передвинь красный шарик к зелёному, используя зеркальное управление</p>
+        <div id="mirror-container">
+            <div style="width: 300px; height: 300px; border: 1px solid #000; position: relative;" id="mirror-area">
+                <div id="mirror-cursor"></div>
+                <div id="mirror-target"></div>
+            </div>
+            <div style="width: 300px; height: 300px; border: 1px solid #000; position: relative; transform: scaleX(-1);" id="mirror-view">
+                <!-- Здесь будет зеркальное отражение -->
+            </div>
+        </div>
+        <p id="mirror-result"></p>
+        <button onclick="setupMirrorGame()">Начать тест</button>
+    </div>
+
+    <script>
+        // ========== Игра 1: Тест на память ==========
+        let memoryNumbers = [];
+
+        function generateMemoryTest() {
+            memoryNumbers = [];
+            const count = 4 + Math.floor(Math.random() * 3); // 4-6 чисел
+            for (let i = 0; i < count; i++) {
+                memoryNumbers.push(Math.floor(Math.random() * 9) + 1);
+            }
+            
+            const display = document.getElementById('numbers-display');
+            display.textContent = memoryNumbers.join(', ');
+            
+            setTimeout(() => {
+                display.textContent = '';
+            }, 1000);
+        }
+
+        function checkMemory() {
+            const userInput = document.getElementById('user-answer').value;
+            const userNumbers = userInput.split(',').map(num => parseInt(num.trim()));
+            
+            const resultElement = document.getElementById('memory-result');
+            
+            if (userNumbers.length !== memoryNumbers.length) {
+                resultElement.textContent = `Неверно! Нужно было: ${memoryNumbers.join(', ')}`;
+                return;
+            }
+            
+            for (let i = 0; i < memoryNumbers.length; i++) {
+                if (userNumbers[i] !== memoryNumbers[i]) {
+                    resultElement.textContent = `Неверно! Нужно было: ${memoryNumbers.join(', ')}`;
+                    return;
+                }
+            }
+            
+            resultElement.textContent = '✅ Верно! Ты справился как шимпанзе!';
+            setTimeout(generateMemoryTest, 2000);
+        }
+
+        // Запускаем первую игру при загрузке
+        generateMemoryTest();
+
+        // ========== Игра 2: Ловля бананов ==========
+        let bananaScore = 0;
+        let bananaTimer;
+        let timeLeft = 10;
+        let bananas = [];
+
+        function startBananaGame() {
+            // Сброс игры
+            bananaScore = 0;
+            timeLeft = 10;
+            document.getElementById('score').textContent = '0';
+            document.getElementById('time-left').textContent = '10';
+            
+            // Очистка поля
+            const gameArea = document.getElementById('banana-game');
+            gameArea.innerHTML = '';
+            bananas = [];
+            
+            // Запуск таймера
+            bananaTimer = setInterval(updateBananaGame, 1000);
+            
+            // Создание бананов
+            setInterval(createBanana, 800);
+        }
+
+        function createBanana() {
+            if (timeLeft <= 0) return;
+            
+            const gameArea = document.getElementById('banana-game');
+            const banana = document.createElement('div');
+            banana.className = 'banana';
+            
+            const x = Math.random() * (gameArea.offsetWidth - 50);
+            const y = Math.random() * (gameArea.offsetHeight - 50);
+            
+            banana.style.left = `${x}px`;
+            banana.style.top = `${y}px`;
+            
+            banana.addEventListener('click', () => {
+                if (timeLeft > 0) {
+                    banana.remove();
+                    bananaScore++;
+                    document.getElementById('score').textContent = bananaScore;
+                }
+            });
+            
+            gameArea.appendChild(banana);
+            bananas.push(banana);
+        }
+
+        function updateBananaGame() {
+            timeLeft--;
+            document.getElementById('time-left').textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(bananaTimer);
+                alert(`Игра окончена! Ты поймал ${bananaScore} бананов! Обезьяны обычно ловят 8-12 за 10 секунд.`);
+                
+                // Удаляем все бананы
+                bananas.forEach(banana => banana.remove());
+                bananas = [];
+            }
+        }
+
+        // ========== Игра 3: Зеркальный тест ==========
+        let mirrorCursor, mirrorTarget, mirrorGameActive = false;
+
+        function setupMirrorGame() {
+            const area = document.getElementById('mirror-area');
+            const mirror = document.getElementById('mirror-view');
+            
+            // Очищаем предыдущую игру
+            area.innerHTML = '';
+            mirror.innerHTML = '';
+            
+            // Создаем элементы
+            mirrorCursor = document.createElement('div');
+            mirrorCursor.id = 'mirror-cursor';
+            mirrorCursor.style.left = '50px';
+            mirrorCursor.style.top = '50px';
+            
+            mirrorTarget = document.createElement('div');
+            mirrorTarget.id = 'mirror-target';
+            mirrorTarget.style.left = `${200 + Math.random() * 50}px`;
+            mirrorTarget.style.top = `${200 + Math.random() * 50}px`;
+            
+            area.appendChild(mirrorCursor);
+            area.appendChild(mirrorTarget);
+            
+            // Создаем зеркальное отражение
+            const mirrorCursorCopy = mirrorCursor.cloneNode();
+            const mirrorTargetCopy = mirrorTarget.cloneNode();
+            
+            mirror.appendChild(mirrorCursorCopy);
+            mirror.appendChild(mirrorTargetCopy);
+            
+            // Настройка управления
+            mirrorGameActive = true;
+            document.getElementById('mirror-result').textContent = '';
+            
+            // Обработчик движения мыши
+            area.addEventListener('mousemove', handleMirrorMove);
+        }
+
+        function handleMirrorMove(e) {
+            if (!mirrorGameActive) return;
+            
+            const area = document.getElementById('mirror-area');
+            const rect = area.getBoundingClientRect();
+            
+            // Позиция курсора
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Ограничение в пределах поля
+            const cursorSize = 30;
+            const boundedX = Math.max(0, Math.min(x, rect.width - cursorSize));
+            const boundedY = Math.max(0, Math.min(y, rect.height - cursorSize));
+            
+            // Обновляем позицию курсора
+            mirrorCursor.style.left = `${boundedX}px`;
+            mirrorCursor.style.top = `${boundedY}px`;
+            
+            // Обновляем зеркальное отражение (координата X инвертирована)
+            const mirrorCursorCopy = document.querySelector('#mirror-view #mirror-cursor');
+            mirrorCursorCopy.style.left = `${rect.width - boundedX - cursorSize}px`;
+            mirrorCursorCopy.style.top = `${boundedY}px`;
+            
+            // Проверка на достижение цели
+            checkMirrorTarget();
+        }
+
+        function checkMirrorTarget() {
+            const cursorRect = mirrorCursor.getBoundingClientRect();
+            const targetRect = mirrorTarget.getBoundingClientRect();
+            
+            if (
+                cursorRect.left < targetRect.right &&
+                cursorRect.right > targetRect.left &&
+                cursorRect.top < targetRect.bottom &&
+                cursorRect.bottom > targetRect.top
+            ) {
+                mirrorGameActive = false;
+                document.getElementById('mirror-result').textContent = 
+                    '✅ Успех! Ты прошел тест на самосознание, как орангутан!';
+            }
+        }
+    </script>
+</body>
+</html>
